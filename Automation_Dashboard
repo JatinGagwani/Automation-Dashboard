@@ -1,0 +1,150 @@
+/**
+ * This script is owned by Jatin Gagwani.
+ * For inquiries or permissions, contact the owner at gagwanijain007@gmail.com.
+ * This script is intended for personal use only. 
+ * For organizational or commercial use, permission from the owner is required.
+ * Visit the owner's website at jatingagwani.com for more information.
+ * For assistance or guidance, feel free to contact us.
+ */
+
+
+
+// Function to collect data from a source sheet to target sheets based on city defined
+function dataCollectionFunction() {
+  // Define sample spreadsheet IDs and sheet names
+  var sourceSpreadsheetId = "SAMPLE_SOURCE_SPREADSHEET_ID";
+  var sourceSheetName = "SAMPLE_SOURCE_SHEET_NAME";
+  var targetSpreadsheetId = "SAMPLE_TARGET_SPREADSHEET_ID";
+  var targetSheetName = "SAMPLE_TARGET_SHEET_NAME";
+
+  // Open the source spreadsheet and retrieve the source sheet
+  var sourceSS = SpreadsheetApp.openById(sourceSpreadsheetId);
+  var sourceSheet = sourceSS.getSheetByName(sourceSheetName);
+
+  // Extract data from the source sheet, limiting to the first 9 columns
+  var sourceData = sourceSheet.getDataRange().getValues().map(function(row) {
+    return row.slice(0, 9); // Limit to the first 9 columns or until column I
+  });
+
+  // Open the target spreadsheet and retrieve the target sheet
+  var targetSS = SpreadsheetApp.openById(targetSpreadsheetId);
+  var targetSheet = targetSS.getSheetByName(targetSheetName);
+
+  // Initialize an array to store data to transfer
+  var dataToTransfer = [];
+
+  // Initialize an object to keep track of allotted entries
+  var allotted = {};
+
+  // Iterate through each row of the source data
+  for (var i = 1; i < sourceData.length; i++) {
+    // Dummy variables for entity identification
+    var entityIdentifier1 = sourceData[i][2]; // Dummy variable 1
+    var entityIdentifier2 = sourceData[i][4]; // Dummy variable 2
+    var city = sourceData[i][1]; // Extract city
+
+    // Check if the city is 'SAMPLE_CITY' (or the sample city)
+    if (city !== 'SAMPLE_CITY') {
+      continue; // Skip to the next iteration if not the sample city
+    }
+
+    var key = entityIdentifier1 + '|' + entityIdentifier2; // Create a unique key based on dummy variables
+
+    // If the entry has not been allotted yet
+    if (!allotted[key]) {
+      allotted[key] = true; // Mark the entry as allotted
+      sourceSheet.getRange(i + 1, 11).setValue("ALLOT"); // Mark the status as ALLOT
+
+      // Add the entire row to dataToTransfer array
+      dataToTransfer.push(sourceData[i]);
+    } else {
+      sourceSheet.getRange(i + 1, 11).setValue("DUP"); // Mark the status as DUP if already allotted
+    }
+  }
+
+  // Transfer data to the target sheet if there's data to transfer
+  if (dataToTransfer.length > 0) {
+    targetSheet.getRange(2, 1, dataToTransfer.length, dataToTransfer[0].length).setValues(dataToTransfer);
+  }
+}
+
+
+// Function to distribute data from a source sheet to target sheets based on predefined limits
+function distributeData() {
+  // Replace "Token_id_SourceSpreadSheet" with the actual ID of the source spreadsheet
+  var ss = SpreadsheetApp.openById("Token_id_SourceSpreadSheet");
+  
+  // Replace "DATASHEET" with the name of the sheet containing the data
+  var masterSheet = ss.getSheetByName("DATASHEET");
+
+  // Extract data from the master sheet, limiting to the first 9 columns
+  var data = masterSheet.getDataRange().getValues().map(function(row) {
+    return row.slice(0, 9);
+  });
+
+  // Retrieve the control sheet for distribution limits
+  var controlSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var controlSheet = controlSpreadsheet.getSheetByName("SHEET_NAME_WHICH_HOLDS_NAME_AND_DATA_TO_TRANSFER");
+
+  // Get the distribution limits for different entities
+  var per1Limit = controlSheet.getRange("D6").getValue();
+  var per2Limit = controlSheet.getRange("D7").getValue();
+
+  // Retrieve the target sheets for data transfer
+  var sheet1 = ss.getSheetByName("NAME_TO_TRANSFER_1");
+  var sheet2 = ss.getSheetByName("NAME_TO_TRANSFER_2");
+
+  // Initialize counters for rows transferred to each target sheet
+  var numRowsTransferredPer1 = 0;
+  var numRowsTransferredPer2 = 0;
+
+  // Initialize an object to keep track of allotted entries
+  var allot = {};
+
+  // Iterate through each row of the data
+  for (var i = 1; i < data.length; i++) {
+    var entityIdentifier1 = data[i][2];
+    var entityIdentifier2 = data[i][4];
+    var status = masterSheet.getRange(i + 1, 11).getValue();
+
+    // Skip rows that are already allotted or marked as duplicate
+    if (status == 'ALLOTED' || status == 'DUPLICATE') {
+      continue;
+    }
+
+    // Check for duplicate entries
+    if (allot[entityIdentifier1 + entityIdentifier2]) {
+      if (data[allot[entityIdentifier1 + entityIdentifier2]][9] == '') {
+        masterSheet.getRange(i + 1, 11).setValue("DUPLICATE");
+      }
+      continue;
+    }
+
+    // Determine the target sheet for the current row based on distribution limits
+    var currentSheet;
+    if (numRowsTransferredPer1 < per1Limit) {
+      currentSheet = sheet1;
+      numRowsTransferredPer1++;
+    } else if (numRowsTransferredPer2 < per2Limit) {
+      currentSheet = sheet2;
+      numRowsTransferredPer2++;
+    } else {
+      break;
+    }
+
+    // Transfer the current row to the target sheet
+    currentSheet.appendRow(data[i]);
+
+    // Mark the row as allotted in the master sheet
+    allot[entityIdentifier1 + entityIdentifier2] = i;
+    masterSheet.getRange(i + 1, 11).setValue("ALLOTED");
+
+    // Update the timestamp in the target sheet
+    currentSheet.getRange(currentSheet.getLastRow(), 12).setValue(new Date());
+
+    // Flush every 100 rows to avoid resource limits
+    if (i % 100 == 0) {
+      SpreadsheetApp.flush();
+    }
+  }
+}
