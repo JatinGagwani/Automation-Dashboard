@@ -25,4 +25,4 @@ This automation significantly reduced manual work, improved data accuracy, and p
 
 ---
 
-[![Watch the video](video_gif_url)](video_url)
+[![Watch the video](video_gif_url)]([video_url](https://github.com/JatinGagwani/Automation-Dashboard/blob/d3a810aa0d5e191040a60d30b3679fc71fa1b9f5/Leads_distribution_dasboard.gif)https://github.com/JatinGagwani/Automation-Dashboard/blob/d3a810aa0d5e191040a60d30b3679fc71fa1b9f5/Leads_distribution_dasboard.gif)
